@@ -21,7 +21,7 @@ Edit the constants at the top of `extension/extension.js`:
 - `DATE_FONT_SIZE` — date size (px)
 - `BUTTON_W` / `BUTTON_H` — numpad button dimensions
 - `NUMPAD_OFFSET` — move numpad up/down from center
-- Clock position: `GY - 290` (clock) and `GY - 200` (date) in `tick()`
+- Clock position: `GY - 450` (clock) and `GY - 200` (date) in `tick()`
 
 ## Debug
     G_MESSAGES_DEBUG=all journalctl --user -f
