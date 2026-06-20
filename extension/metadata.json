@@ -3,6 +3,14 @@
   "description": "Lock screen for GNOME Mali session (no GDM required)",
   "uuid": "gnome-mali-lock@furios",
   "version": 1,
-  "shell-version": ["49", "49.2"],
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "49.2",
+    "50"
+  ],
   "url": ""
 }
