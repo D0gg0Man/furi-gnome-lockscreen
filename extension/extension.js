@@ -111,7 +111,29 @@ function doUnlock() {
 }
 
 function buildUI() {
-    let W = global.screen_width, H = global.screen_height;
+    let monitor = Main.layoutManager.primaryMonitor;
+    let W = monitor.width, H = monitor.height;
+
+    // Size the numpad as a fraction of the ACTUAL stage width so it fits on any
+    // panel/scale. (This device reports a 480-wide logical stage; the old fixed
+    // 270px buttons overflowed -> GX went negative -> "massive" clipping.)
+    // scale_factor is deliberately NOT used: actor sizes and CSS font-size are
+    // both in stage px here, so applying it would double-count. The button
+    // aspect and gap ratios from the constants above are preserved, and the
+    // rest of the design (fonts, vertical offsets) scales by the same factor k.
+    const _aspect    = BUTTON_H / BUTTON_W;       // keep button shape
+    const _gapRatio  = BUTTON_GAP / BUTTON_W;     // keep gap proportion
+    const NUMPAD_FRAC = 0.82;                      // numpad spans ~82% of width
+    const BW  = Math.round((W * NUMPAD_FRAC) / (3 + 2 * _gapRatio));
+    const GAP = Math.round(BW * _gapRatio);
+    const BH  = Math.round(BW * _aspect);
+    const k   = BW / BUTTON_W;                     // effective design scale
+    const _px = (v) => Math.round(v * k);
+    const CLOCK_FS  = _px(CLOCK_FONT_SIZE);
+    const DATE_FS   = _px(DATE_FONT_SIZE);
+    const PIN_FS    = _px(PIN_FONT_SIZE);
+    const STATUS_FS = _px(STATUS_FONT_SIZE);
+    const BUTTON_FS = _px(BUTTON_FONT_SIZE);
 
     let ov = new St.Widget({
         style: 'background-color: #000000;',
@@ -119,10 +141,9 @@ function buildUI() {
         x: 0, y: 0, width: W, height: H, opacity: 255,
     });
 
-    const BW = BUTTON_W, BH = BUTTON_H, GAP = BUTTON_GAP;
     const GW = 3*BW + 2*GAP;
     const GX = Math.floor((W - GW) / 2);
-    const GY = Math.floor(H/2) - Math.floor(1.5*(BH+GAP)) + NUMPAD_OFFSET;
+    const GY = Math.floor(H/2) - Math.floor(1.5*(BH+GAP)) + _px(NUMPAD_OFFSET);
 
     // PIN group — hidden until power button wakes screen
     let pg = new St.Widget({ x: 0, y: 0, width: W, height: H, opacity: 0 });
@@ -132,13 +153,13 @@ function buildUI() {
 
     // Clock
     let clk = new St.Label({
-        style: `font-size: ${CLOCK_FONT_SIZE}px; color: #ffffff; font-weight: 300;`
+        style: `font-size: ${CLOCK_FS}px; color: #ffffff; font-weight: 300;`
     });
     pg.add_child(clk);
 
     // Date
     let dateLbl = new St.Label({
-        style: `font-size: ${DATE_FONT_SIZE}px; color: #aaaaaa;`
+        style: `font-size: ${DATE_FS}px; color: #aaaaaa;`
     });
     pg.add_child(dateLbl);
 
@@ -153,8 +174,8 @@ function buildUI() {
         dateLbl.set_text(days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()]);
         // Center after layout
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            clk.set_position(Math.floor(W/2 - clk.width/2), GY - 450);
-            dateLbl.set_position(Math.floor(W/2 - dateLbl.width/2), GY - 200);
+            clk.set_position(Math.floor(W/2 - clk.width/2), GY - _px(450));
+            dateLbl.set_position(Math.floor(W/2 - dateLbl.width/2), GY - _px(200));
             return GLib.SOURCE_REMOVE;
         });
         return GLib.SOURCE_CONTINUE;
@@ -166,20 +187,20 @@ function buildUI() {
 
     // PIN dots
     let dots = new St.Label({
-        style: `font-size: ${PIN_FONT_SIZE}px; color: #ffffff;`, text: ''
+        style: `font-size: ${PIN_FS}px; color: #ffffff;`, text: ''
     });
     pg.add_child(dots);
 
     // Status
     let status = new St.Label({
-        style: `font-size: ${STATUS_FONT_SIZE}px; color: #888888;`, text: 'Enter PIN'
+        style: `font-size: ${STATUS_FS}px; color: #888888;`, text: 'Enter PIN'
     });
     pg.add_child(status);
 
     function reposition() {
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            dots.set_position(Math.floor(W/2 - dots.width/2), GY - 105);
-            status.set_position(Math.floor(W/2 - status.width/2), GY - 55);
+            dots.set_position(Math.floor(W/2 - dots.width/2), GY - _px(105));
+            status.set_position(Math.floor(W/2 - status.width/2), GY - _px(55));
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -195,7 +216,7 @@ function buildUI() {
 
     function tryAuth() {
         status.set_text('Checking...');
-        status.set_style(`font-size: ${STATUS_FONT_SIZE}px; color: #888888;`);
+        status.set_style(`font-size: ${STATUS_FS}px; color: #888888;`);
         reposition();
         let p = pin;
         try {
@@ -212,7 +233,7 @@ function buildUI() {
                     if (success) { doUnlock(); return; }
                     pin = ''; redrawDots();
                     status.set_text('Wrong PIN');
-                    status.set_style(`font-size: ${STATUS_FONT_SIZE}px; color: #ff5555;`);
+                    status.set_style(`font-size: ${STATUS_FS}px; color: #ff5555;`);
                     reposition();
                     // Shake animation
                     let btns = [];
@@ -228,7 +249,7 @@ function buildUI() {
                     shake();
                     GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
                         status.set_text('Enter PIN');
-                        status.set_style(`font-size: ${STATUS_FONT_SIZE}px; color: #888888;`);
+                        status.set_style(`font-size: ${STATUS_FS}px; color: #888888;`);
                         reposition();
                         return GLib.SOURCE_REMOVE;
                     });
@@ -252,8 +273,8 @@ function buildUI() {
     [['1','2','3'],['4','5','6'],['7','8','9'],['⌫','0','✓']].forEach((row, r) => {
         row.forEach((lbl, c) => {
             let isAct = lbl === '⌫' || lbl === '✓';
-            let su = `background-color:${isAct?'#2a2a5e':'#161636'}; border-radius:20px; font-size:${BUTTON_FONT_SIZE}px; color:#ffffff; border:1px solid #333366;`;
-            let sd = `background-color:${isAct?'#4a4a9e':'#363676'}; border-radius:20px; font-size:${BUTTON_FONT_SIZE}px; color:#ffffff; border:1px solid #5555aa;`;
+            let su = `background-color:${isAct?'#2a2a5e':'#161636'}; border-radius:20px; font-size:${BUTTON_FS}px; color:#ffffff; border:1px solid #333366;`;
+            let sd = `background-color:${isAct?'#4a4a9e':'#363676'}; border-radius:20px; font-size:${BUTTON_FS}px; color:#ffffff; border:1px solid #5555aa;`;
             let btn = new St.Button({
                 label: lbl, style: su,
                 reactive: true, can_focus: false, track_hover: false,
@@ -314,7 +335,7 @@ function lock() {
     try { if (Main.pushModal(_overlay)) _modalPushed = true; } catch(e) { log('pushModal err:' + e); }
     try { GLib.spawn_command_line_async('touch /tmp/gnome-mali-lock-state.locked'); } catch(e) {}
     setBrightness(0);
-    log('gnome-mali-lock: locked pushModal=' + _modalPushed + ' savedBright=' + _savedBright);
+    log('gnome-mali-lock: locked pushModal=' + _modalPushed + ' savedBright=' + bright);
 }
 
 export default class GnomeMaliLock {

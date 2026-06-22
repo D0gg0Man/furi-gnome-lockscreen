@@ -16,12 +16,16 @@ Phone-like lock screen for GNOME Shell on FuriOS, no GDM required.
     sudo ./install.sh
 
 ## Customization
-Edit the constants at the top of `extension/extension.js`:
-- `CLOCK_FONT_SIZE` — clock size (px)
-- `DATE_FONT_SIZE` — date size (px)
-- `BUTTON_W` / `BUTTON_H` — numpad button dimensions
+Edit the constants at the top of `extension/extension.js`. The numpad is sized
+relative to the screen width (it spans `NUMPAD_FRAC`, default ~82%, of the stage)
+so it fits on any panel/scale, and the rest of the design scales with it:
+- `BUTTON_W` / `BUTTON_H` — button **aspect ratio** (and, with `BUTTON_GAP`, the
+  gap proportion); absolute size is derived from the screen width
+- `NUMPAD_FRAC` (in `buildUI`) — fraction of screen width the numpad spans
+- `CLOCK_FONT_SIZE` / `DATE_FONT_SIZE` / `BUTTON_FONT_SIZE` — reference font sizes,
+  scaled by the same factor as the buttons
 - `NUMPAD_OFFSET` — move numpad up/down from center
-- Clock position: `GY - 450` (clock) and `GY - 200` (date) in `tick()`
+- Clock/date vertical position: `GY - 450` / `GY - 200` in `tick()` (also scaled)
 
 ## Debug
     G_MESSAGES_DEBUG=all journalctl --user -f
